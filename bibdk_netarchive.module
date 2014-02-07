@@ -1,0 +1,127 @@
+<?php
+
+/**
+ * @file bibdk_netarchive.module
+ * Add link to archived pdf articles of Ting objects
+ */
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function bibdk_netarchive_menu() {
+
+  $items['moreinfo/netarchive/%'] = array(
+    'title' => '',
+    'page callback' => 'bibdk_netarchive_moreinfo_callback',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'type'  => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+
+}
+
+
+/**
+ * Implementation of hook_admin_paths_alter().
+ */
+function bibdk_netarchive_admin_paths_alter(&$paths) {
+  $paths['moreinfo/bibdk_netarchive/*'] = FALSE;
+}
+
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function bibdk_netarchive_theme() {
+  return array(
+    'bibdk_netarchive_link' => array(
+      'render element' => 'elements',
+      'template' => 'theme/bibdk-netarchive-link',
+    ),
+  );
+}
+
+
+
+/**
+ * webarchive page callback
+ */
+function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
+
+  if ( !$local_id ) {
+    return t('pdf ID is missing', array(), array('context' => 'bibdk_netarchive:error'));
+    watchdog('netarchive', 'Netarchive PDF was called with empty ID.', array(), WATCHDOG_ERROR);
+  }
+
+  $path = open_moreinfo_object_path($local_id, 'netarchivePdfUrl');
+
+  if ( file_exists($path) ) {
+    $src = $GLOBALS['base_url'] . '/sites/default/files/moreinfo/netarchivePdfUrl/' . md5($local_id) . '.pdf';
+    $output = '<object data="' . $src . '?page=1&amp;view=Fit" type="application/pdf" width="590" height="890">
+      <p>It appears you don\'t have a PDF plugin for this browser.
+         No biggie... you can <a href="' . $src . '">click here to download the PDF file.</a></p>
+    </object>';
+    return $output;
+
+  }
+  else {
+
+    return t("pdf \"@lid\" not found.", array('@lid' => $local_id), array('context' => 'bibdk_netarchive:error'));
+
+  }
+
+}
+
+
+
+/** Implements hook_ting_openformat_actions
+ * Add actions to work, subwork and manifestations
+ * @param $type
+ * @param $entity
+ * @param $view_mode
+ * @param $langcode
+ * @return array
+ */
+function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $langcode){
+
+  $netarchive_link = array();
+
+  if ( $type == 'bibdkManifestation' && $entity->getWebArchive() ){
+
+    $netarchive_link = array();
+
+    $local_id = explode(':',$entity->ding_entity_id);
+    $local_id = $local_id[1];
+
+    // return render array for netarchive link:
+    $options = array(
+      'attributes' => array(
+        'title' => t('netarchive link'),
+        'id' => drupal_html_id('netarchive-' . $local_id),
+        'class' => array('netarchive'),
+      ),
+      'html' => TRUE,
+    );
+
+    $netarchive_link = array(
+      '#text' => t('label_netarchive_link', array(), array('context' => 'bibdk_covers')),
+      '#path' => 'moreinfo/netarchive/' . $local_id,
+      '#options' => $options,
+    );
+
+  }
+
+  $element['netarchive'] = array(
+    '#markup' => theme('bibdk_netarchive_link', array('elements' => $netarchive_link)),
+    '#weight' => 1
+  );
+
+  return $element;
+
+}
+
+
