@@ -1,0 +1,1 @@
+{ "pdffile": "{TMPL_VAR name="pdffile"}", "overskrift": "{TMPL_VAR name="forklaede_overskrift"}", "kopi_af": "{TMPL_VAR name="forklaede_kopi_af"}", "data": "{TMPL_VAR name="forklaede_data"}", "footer": "{TMPL_VAR name="forklaede_footer"}" }

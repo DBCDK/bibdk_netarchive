@@ -7,7 +7,7 @@
   $elements['#options']['attributes']['class'][] = 'text-small';
   $elements['#options']['attributes']['class'][] = 'text-darkgrey';
 
-  $elements['#options']['attributes']['rel'] = 'lightframe[|width:600px; height:900px; scrolling: auto;]';
+  $elements['#options']['attributes']['rel'] = 'lightframe[|width:680px; height:900px; scrolling: auto;]';
 
   echo l(
     $elements['#text'],
