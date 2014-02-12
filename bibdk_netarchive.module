@@ -35,7 +35,6 @@ function bibdk_netarchive_admin_paths_alter(&$paths) {
 }
 
 
-
 /**
  * Implementation of hook_theme().
  */
@@ -69,20 +68,19 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
   $local_id = urldecode($local_id);
 
   // get bibliographic data
-  $bibdata = bibdk_netarchive_search($local_id);
-
-  // get netarchive pdf
-  $archive_path = open_moreinfo_object_path($bibdata['lid'], 'netarchivePdfUrl');
-
-  if ( !empty($bibdata['creator']) ) {
-    $bibdata['creator'] = $bibdata['creator'] . ' : ';
+  if ( $bibdata = bibdk_netarchive_search($local_id) ) {
+    // get netarchive pdf
+    $archive_path = open_moreinfo_object_path($bibdata['lid'], 'netarchivePdfUrl');
+    if ( !empty($bibdata['creator']) ) {
+      $bibdata['creator'] = $bibdata['creator'] . ' : ';
+    }
+    $for_tit = $bibdata['creator'] . $bibdata['title'];
   }
-  $bibdata = $bibdata['creator'] . $bibdata['title'];
 
-  if ( !file_exists($archive_path) ) {
+  if ( !$bibdata || !$archive_path || !file_exists($archive_path) ) {
     $items = array(
       '#theme' => 'bibdk_netarchive_error',
-      '#bibdk_netarchive_error' => t("pdf \"@lid\" not found.", array('@lid' => $bibdata), array('context' => 'bibdk_netarchive:error')),
+      '#bibdk_netarchive_error' => t("netarchive_cover_error", array('@for_tit' => $bibdata), array('context' => 'bibdk_netarchive:error')),
     );
     return drupal_render($items);
   }
@@ -158,6 +156,8 @@ function bibdk_netarchive_search($local_id) {
     return array('title'=>'','creator'=>'');
   }
 
+
+  $item = FALSE;
 
   // Loop over the search results collecting basic object information.
   /* @var $TingClientObjectCollection TingClientObjectCollection */
