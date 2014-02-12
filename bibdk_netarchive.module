@@ -25,14 +25,6 @@ function bibdk_netarchive_menu() {
 
 
 /**
- * Implementation of hook_admin_paths_alter().
- */
-function bibdk_netarchive_admin_paths_alter(&$paths) {
-  $paths['moreinfo/bibdk_netarchive/*'] = FALSE;
-}
-
-
-/**
  * Implementation of hook_theme().
  */
 function bibdk_netarchive_theme() {
@@ -51,6 +43,8 @@ function bibdk_netarchive_theme() {
 
 /**
  * webarchive page callback
+ * @param string $local_id openSearch record identifier
+ * @return mixed. PDF file or html error message
  */
 function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
 
@@ -119,6 +113,11 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
 
 
 
+/**
+ * openSearch record lookup
+ * @param string $local_id openSearch record identifier
+ * @return mixed. Array or FALSE
+ */
 function bibdk_netarchive_search($local_id) {
 
   $params['query'] = 'rec.id=' . $local_id ;

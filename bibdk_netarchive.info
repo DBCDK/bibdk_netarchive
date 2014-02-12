@@ -8,4 +8,3 @@ files[] = bibdk_netarchive.test
 
 dependencies[] = open_moreinfo
 dependencies[] = ting_openformat
-dependencies[] = lightbox2
