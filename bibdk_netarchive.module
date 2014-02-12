@@ -6,9 +6,6 @@
  */
 
 
-module_load_include('inc', 'bibdk_netarchive', 'bibdk_netarchive.admin');
-
-
 /**
  * Implementation of hook_menu().
  */
