@@ -60,8 +60,10 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
 
   // get bibliographic data
   if ( $bibdata = bibdk_netarchive_search($local_id) ) {
+
     // get netarchive pdf
     $archive_path = open_moreinfo_object_path($bibdata['lid'], 'netarchivePdfUrl');
+
     if ( !empty($bibdata['creator']) ) {
       $bibdata['creator'] = $bibdata['creator'] . ' : ';
     }
@@ -71,10 +73,11 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
   if ( !$bibdata || !$archive_path || !file_exists($archive_path) ) {
     $items = array(
       '#theme' => 'bibdk_netarchive_error',
-      '#bibdk_netarchive_error' => t("netarchive_cover_error", array('@for_tit' => $bibdata), array('context' => 'bibdk_netarchive:error')),
+      '#bibdk_netarchive_error' => t("netarchive_cover_error @for_tit", array('@for_tit' => $for_tit), array('context' => 'bibdk_netarchive:error')),
     );
     return drupal_render($items);
   }
+
 
   // initiate FPDI
   $pdf = new FPDI();
@@ -91,7 +94,7 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
   $pdf->Cell(0, 0, t("netarchive_cover_leadtext", array(), array('context' => 'bibdk_netarchive')), 0, 0, 'C');
 
   $pdf->ln(10);
-  $pdf->MultiCell(0, 0, $bibdata, 0, 'C');
+  $pdf->MultiCell(0, 15, $for_tit, 0, 'C');
 
   $pdf->SetXY(0, 250);
   $pdf->SetFont('Times','',16);
