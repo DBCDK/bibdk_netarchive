@@ -45,12 +45,13 @@ class bibdkNetarchiveUnitTest extends DrupalWebTestCase {
 
   private function _testNetArchivePathValid() {
     $this->drupalGet('moreinfo/netarchive/34959889');
-    $this->assertText('PDF-1.3 3 0 obj', 'Return PDF if ID is valid.');
+    $this->assertResponse('200');
+    $this->assertNoText('netarchive_cover_error');
   }
 
   private function _testNetArchivePath() {
     $this->drupalGet('moreinfo/netarchive/1234567890');
-    $this->assertText('netarchive_cover_error', 'Return error if ID is not valid.');
+    $this->assertText('netarchive_cover_error');
   }
 
 }
