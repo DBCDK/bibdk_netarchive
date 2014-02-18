@@ -48,6 +48,8 @@ function bibdk_netarchive_theme() {
  */
 function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
 
+  $for_tit = $archive_path = '';
+
   if ( !$local_id ) {
     return t('pdf ID is missing', array(), array('context' => 'bibdk_netarchive:error'));
     watchdog('netarchive', 'Netarchive PDF was called with empty ID.', array(), WATCHDOG_ERROR);
@@ -60,17 +62,15 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
 
   // get bibliographic data
   if ( $bibdata = bibdk_netarchive_search($local_id) ) {
-
     // get netarchive pdf
-    $archive_path = open_moreinfo_object_path($bibdata['lid'], 'netarchivePdfUrl');
-
+    $archive_path = open_moreinfo_object_path($local_id, 'netarchivePdfUrl');
     if ( !empty($bibdata['creator']) ) {
       $bibdata['creator'] = $bibdata['creator'] . ' : ';
     }
     $for_tit = $bibdata['creator'] . $bibdata['title'];
   }
 
-  if ( !$bibdata || !$archive_path || !file_exists($archive_path) ) {
+  if ( !$for_tit || !$archive_path || !file_exists($archive_path) ) {
     $items = array(
       '#theme' => 'bibdk_netarchive_error',
       '#bibdk_netarchive_error' => t("netarchive_cover_error @for_tit", array('@for_tit' => $for_tit), array('context' => 'bibdk_netarchive:error')),
@@ -127,24 +127,20 @@ function bibdk_netarchive_search($local_id) {
 
   $params['numResults'] = 1;
   $params['includeHoldingsCount'] = FALSE;
+  $params['objectFormat'] = variable_get('objectFormat', 'briefDisplay');
+  $params['queryLanguage'] = ting_openformat_get_cql_language();
 
   // search profile (opensearch::profile)
   $params['profile'] = variable_get('ting_search_profile', FALSE);
-  if (!($params['profile'])) {
+  if ( !($params['profile']) ) {
     watchdog('bibdk netarchive', 'search profile is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
   }
 
   // agency (opensearch::agency)
   $params['agency'] = variable_get('ting_agency');
-  if (!($params['agency'])) {
+  if ( !($params['agency']) ) {
     watchdog('bibdk netarchive', 'agency is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
   }
-
-  // set Object Format
-  $params['objectFormat'] = variable_get('objectFormat', 'briefDisplay');
-
-  //Set queryLanguage
-  $params['queryLanguage'] = ting_openformat_get_cql_language();
 
   // do the actual search via ting_client_class
   $client = new ting_client_class();
