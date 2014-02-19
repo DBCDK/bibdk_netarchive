@@ -188,11 +188,7 @@ function bibdk_netarchive_search($local_id) {
  */
 function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $langcode){
 
-  $netarchive_link = array();
-
   if ( $type == 'bibdkManifestation' && $entity->getWebArchive() ){
-
-    $netarchive_link = array();
 
     $local_id = urlencode($entity->ding_entity_id);
 
@@ -212,14 +208,14 @@ function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $l
       '#options' => $options,
     );
 
+    $element['netarchive'] = array(
+      '#markup' => theme('bibdk_netarchive_link', array('elements' => $netarchive_link)),
+      '#weight' => 1
+    );
+
+    return $element;
+
   }
-
-  $element['netarchive'] = array(
-    '#markup' => theme('bibdk_netarchive_link', array('elements' => $netarchive_link)),
-    '#weight' => 1
-  );
-
-  return $element;
 
 }
 
