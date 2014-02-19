@@ -188,7 +188,7 @@ function bibdk_netarchive_search($local_id) {
  */
 function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $langcode){
 
-  if ( $type == 'bibdkManifestation' && $entity->getWebArchive() ){
+  if ( $type == 'bibdkManifestation' && method_exists($entity, 'getWebArchive') && $entity->getWebArchive() ){
 
     $local_id = urlencode($entity->ding_entity_id);
 
