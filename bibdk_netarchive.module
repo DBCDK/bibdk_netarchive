@@ -94,7 +94,7 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
   $pdf->Cell(0, 0, t("netarchive_cover_leadtext", array(), array('context' => 'bibdk_netarchive')), 0, 0, 'C');
 
   $pdf->ln(10);
-  $pdf->MultiCell(0, 15, $for_tit, 0, 'C');
+  $pdf->MultiCell(0, 15, utf8_decode($for_tit), 0, 'C');
 
   $pdf->SetXY(0, 250);
   $pdf->SetFont('Times','',16);
