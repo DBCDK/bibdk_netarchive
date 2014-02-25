@@ -25,15 +25,6 @@ function bibdk_netarchive_menu() {
 
 
 /**
- * Implementation of hook_admin_paths_alter().
- */
-function bibdk_netarchive_admin_paths_alter(&$paths) {
-  $paths['moreinfo/bibdk_netarchive/*'] = FALSE;
-}
-
-
-
-/**
  * Implementation of hook_theme().
  */
 function bibdk_netarchive_theme() {
@@ -42,37 +33,146 @@ function bibdk_netarchive_theme() {
       'render element' => 'elements',
       'template' => 'theme/bibdk-netarchive-link',
     ),
+    'bibdk_netarchive_error' => array(
+      'render element' => 'elements',
+      'template' => 'theme/bibdk-netarchive-error',
+    ),
   );
 }
 
 
-
 /**
  * webarchive page callback
+ * @param string $local_id openSearch record identifier
+ * @return mixed. PDF file or html error message
  */
 function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
+
+  $for_tit = $archive_path = '';
 
   if ( !$local_id ) {
     return t('pdf ID is missing', array(), array('context' => 'bibdk_netarchive:error'));
     watchdog('netarchive', 'Netarchive PDF was called with empty ID.', array(), WATCHDOG_ERROR);
   }
 
-  $path = open_moreinfo_object_path($local_id, 'netarchivePdfUrl');
+  require_once('lib/fpdf/fpdf.php');
+  require_once('lib/fpdi/fpdi.php');
 
-  if ( file_exists($path) ) {
-    $src = $GLOBALS['base_url'] . '/sites/default/files/moreinfo/netarchivePdfUrl/' . md5($local_id) . '.pdf';
-    $output = '<object data="' . $src . '?page=1&amp;view=Fit" type="application/pdf" width="590" height="890">
-      <p>It appears you don\'t have a PDF plugin for this browser.
-         No biggie... you can <a href="' . $src . '">click here to download the PDF file.</a></p>
-    </object>';
-    return $output;
+  $local_id = urldecode($local_id);
 
+  // get bibliographic data
+  if ( $bibdata = bibdk_netarchive_search($local_id) ) {
+    // get netarchive pdf
+    $archive_path = open_moreinfo_object_path($local_id, 'netarchivePdfUrl');
+    if ( !empty($bibdata['creator']) ) {
+      $bibdata['creator'] = $bibdata['creator'] . ' : ';
+    }
+    $for_tit = $bibdata['creator'] . $bibdata['title'];
   }
-  else {
 
-    return t("pdf \"@lid\" not found.", array('@lid' => $local_id), array('context' => 'bibdk_netarchive:error'));
-
+  if ( !$for_tit || !$archive_path || !file_exists($archive_path) ) {
+    $items = array(
+      '#theme' => 'bibdk_netarchive_error',
+      '#bibdk_netarchive_error' => t("netarchive_cover_error @for_tit", array('@for_tit' => $for_tit), array('context' => 'bibdk_netarchive:error')),
+    );
+    return drupal_render($items);
   }
+
+
+  // initiate FPDI
+  $pdf = new FPDI();
+
+  // add a page
+  $pdf->AddPage();
+
+  $pdf->SetXY(0, 40);
+  $pdf->SetFont('Times','',32);
+  $pdf->Cell(0, 0, t("netarchive_cover_header", array(), array('context' => 'bibdk_netarchive')), 0, 0, 'C');
+
+  $pdf->SetXY(0, 70);
+  $pdf->SetFont('Times','',24);
+  $pdf->Cell(0, 0, t("netarchive_cover_leadtext", array(), array('context' => 'bibdk_netarchive')), 0, 0, 'C');
+
+  $pdf->ln(10);
+  $pdf->MultiCell(0, 15, utf8_decode($for_tit), 0, 'C');
+
+  $pdf->SetXY(0, 250);
+  $pdf->SetFont('Times','',16);
+  $pdf->MultiCell(0, 0, t("netarchive_cover_footer", array(), array('context' => 'bibdk_netarchive')), 0, 'C');
+
+  // set the source file
+  $page_count = $pdf->setSourceFile($archive_path);
+
+  for ( $n=1; $n <= $page_count; $n++ ) {
+    $tplIdx = $pdf->importPage($n);
+    $pdf->AddPage();
+    // use the imported page and place it at point 0, 0
+    $pdf->useTemplate($tplIdx, 0, 0);
+  }
+
+  $pdf->Output();
+
+}
+
+
+
+/**
+ * openSearch record lookup
+ * @param string $local_id openSearch record identifier
+ * @return mixed. Array or FALSE
+ */
+function bibdk_netarchive_search($local_id) {
+
+  $params['query'] = 'rec.id=' . $local_id ;
+
+  $params['numResults'] = 1;
+  $params['includeHoldingsCount'] = FALSE;
+  $params['objectFormat'] = variable_get('objectFormat', 'briefDisplay');
+  $params['queryLanguage'] = ting_openformat_get_cql_language();
+
+  // search profile (opensearch::profile)
+  $params['profile'] = variable_get('ting_search_profile', FALSE);
+  if ( !($params['profile']) ) {
+    watchdog('bibdk netarchive', 'search profile is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
+  }
+
+  // agency (opensearch::agency)
+  $params['agency'] = variable_get('ting_agency');
+  if ( !($params['agency']) ) {
+    watchdog('bibdk netarchive', 'agency is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
+  }
+
+  // do the actual search via ting_client_class
+  $client = new ting_client_class();
+
+  $result = $client->do_request('search', $params);
+
+  if ( !$result ) {
+    return array('title'=>'','creator'=>'');
+  }
+
+
+  $item = FALSE;
+
+  // Loop over the search results collecting basic object information.
+  /* @var $TingClientObjectCollection TingClientObjectCollection */
+  foreach ($result->collections as $key => $TingClientObjectCollection) {
+    $manifestations = $TingClientObjectCollection->getFormattedCollection()
+      ->getBriefDisplay()->manifestation;
+    foreach ($manifestations as $manifestation) {
+      $item = array();
+      $item['pid'] = (!empty($manifestation->identifier->{'$'})) ? $manifestation->identifier->{'$'} : FALSE;
+      if ($item['pid']) {
+        $i = explode(':', $item['pid']);
+        $item['lok'] = $i[0];
+        $item['lid'] = $i[1];
+      }
+      $item['title'] = (!empty($manifestation->title->{'$'})) ? $manifestation->title->{'$'} : NULL;
+      $item['creator'] = (!empty($manifestation->creator->{'$'})) ? $manifestation->creator->{'$'} : NULL;
+    }
+  }
+
+  return $item;
 
 }
 
@@ -88,14 +188,9 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
  */
 function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $langcode){
 
-  $netarchive_link = array();
+  if ( $type == 'bibdkManifestation' && method_exists($entity, 'getWebArchive') && $entity->getWebArchive() ){
 
-  if ( $type == 'bibdkManifestation' && $entity->getWebArchive() ){
-
-    $netarchive_link = array();
-
-    $local_id = explode(':',$entity->ding_entity_id);
-    $local_id = $local_id[1];
+    $local_id = urlencode($entity->ding_entity_id);
 
     // return render array for netarchive link:
     $options = array(
@@ -113,14 +208,14 @@ function bibdk_netarchive_ting_openformat_actions($type, $entity, $view_mode, $l
       '#options' => $options,
     );
 
+    $element['netarchive'] = array(
+      '#markup' => theme('bibdk_netarchive_link', array('elements' => $netarchive_link)),
+      '#weight' => 1
+    );
+
+    return $element;
+
   }
-
-  $element['netarchive'] = array(
-    '#markup' => theme('bibdk_netarchive_link', array('elements' => $netarchive_link)),
-    '#weight' => 1
-  );
-
-  return $element;
 
 }
 
