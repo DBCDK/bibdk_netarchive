@@ -2,7 +2,7 @@ name = Bibliotek.dk NetArchive
 description = Add link to archived pdf articles of Ting objects
 package = Bibliotek.dk
 core = 7.x
-version = 7.x-0.3
+version = 7.x-0.4
 
 files[] = test/bibdk_netarchive.test
 
