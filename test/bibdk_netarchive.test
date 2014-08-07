@@ -26,9 +26,9 @@ class bibdkNetarchiveUnitTest extends DrupalWebTestCase {
     //NetArchive service
     $var = array(
       'url' => 'http://moreinfo.addi.dk/2.1/moreinfo.wsdl',
-      'username' => 'netpunkt',
-      'group'    => '010100',
-      'password' => '20Koster'
+      'username' => 'foo',
+      'group'    => '000001',
+      'password' => 'bar'
     );
 
     //All variables have been reset to set these again!
@@ -44,13 +44,12 @@ class bibdkNetarchiveUnitTest extends DrupalWebTestCase {
   }
 
   private function _testNetArchivePathValid() {
-    $this->drupalGet('moreinfo/netarchive/34959889');
+    $this->drupalGet('moreinfo/netarchive/870971-foo:34959889');
     $this->assertResponse('200');
-    $this->assertNoText('netarchive_cover_error');
   }
 
   private function _testNetArchivePath() {
-    $this->drupalGet('moreinfo/netarchive/1234567890');
+    $this->drupalGet('moreinfo/netarchive/870971-foo:1234567890');
     $this->assertText('netarchive_cover_error');
   }
 
