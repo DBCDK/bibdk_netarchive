@@ -64,10 +64,16 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
   if ( $bibdata = bibdk_netarchive_search($local_id) ) {
     // get netarchive pdf
     $archive_path = open_moreinfo_object_path($local_id, 'netarchivePdfUrl');
+    if ( !$archive_path ) {
+      watchdog('netarchive', 'Netarchive PDF return empty path.', array(), WATCHDOG_ERROR);
+    }
     if ( !empty($bibdata['creator']) ) {
       $bibdata['creator'] = $bibdata['creator'] . ' : ';
     }
-    $for_tit = $bibdata['creator'] . $bibdata['title'];
+    $for_tit = strip_tags($bibdata['creator']) . strip_tags($bibdata['title']);
+    if ( !$for_tit ) {
+      watchdog('netarchive', 'Netarchive PDF return empty creator and title.', array(), WATCHDOG_ERROR);
+    }
   }
 
   if ( !$for_tit || !$archive_path || !file_exists($archive_path) ) {
@@ -141,52 +147,23 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
  */
 function bibdk_netarchive_search($local_id) {
 
-  $params['query'] = 'rec.id=' . $local_id ;
+  $works = ting_openformat_get_manifestations(array($local_id));
 
-  $params['numResults'] = 1;
-  $params['includeHoldingsCount'] = FALSE;
-  $params['objectFormat'] = variable_get('objectFormat', 'briefDisplay');
-  $params['queryLanguage'] = ting_openformat_get_cql_language();
+  $work = reset($works);
+  $manifestations = $work->getManifestations();
 
-  // search profile (opensearch::profile)
-  $params['profile'] = variable_get('ting_search_profile', FALSE);
-  if ( !($params['profile']) ) {
-    watchdog('bibdk netarchive', 'search profile is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
-  }
-
-  // agency (opensearch::agency)
-  $params['agency'] = variable_get('ting_agency');
-  if ( !($params['agency']) ) {
-    watchdog('bibdk netarchive', 'agency is not set - yields no search results', array(), WATCHDOG_ERROR, url('admin/config/ting/settings'));
-  }
-
-  // do the actual search via ting_client_class
-  $client = new ting_client_class();
-
-  $result = $client->do_request('search', $params);
-
-  if ( !$result ) {
+  if ( !count($manifestations) ) {
     return array('title'=>'','creator'=>'');
   }
 
-
-  $item = FALSE;
-
-  // Loop over the search results collecting basic object information.
-  /* @var $TingClientObjectCollection TingClientObjectCollection */
-  foreach ($result->collections as $key => $TingClientObjectCollection) {
-    $manifestations = $TingClientObjectCollection->getFormattedCollection()
-      ->getBriefDisplay()->manifestation;
-    foreach ($manifestations as $manifestation) {
-      $item = array();
-      $item['pid'] = (!empty($manifestation->identifier->{'$'})) ? $manifestation->identifier->{'$'} : FALSE;
-      if ($item['pid']) {
-        $i = explode(':', $item['pid']);
-        $item['lok'] = $i[0];
-        $item['lid'] = $i[1];
-      }
-      $item['title'] = (!empty($manifestation->title->{'$'})) ? $manifestation->title->{'$'} : NULL;
-      $item['creator'] = (!empty($manifestation->creator->{'$'})) ? $manifestation->creator->{'$'} : NULL;
+  foreach ( $manifestations as $manifestation ) {
+    $item['title'] = _ting_openformat_parse_element($manifestation->getTitle());
+    $item['creator'] = _ting_openformat_parse_element($manifestation->getCreator());
+    $item['pid'] = ( !empty($manifestation->id) ) ? $manifestation->id : FALSE;
+    if ($item['pid']) {
+      $i = explode(':', $item['pid']);
+      $item['lok'] = $i[0];
+      $item['lid'] = $i[1];
     }
   }
 
