@@ -125,7 +125,7 @@ function bibdk_netarchive_moreinfo_callback($local_id = NULL) {
     // pdfi "apron" failed. Return original
     if ( file_exists($archive_path) ) {
       $src = $GLOBALS['base_url'] . '/sites/default/files/moreinfo/netarchivePdfUrl/' . md5($local_id) . '.pdf';
-      $output = 
+      $output =
         '<object data="' . $src . '?page=1&amp;view=Fit" type="application/pdf" width="590" height="890"><p>' .
         t('It appears you don\'t have a PDF plugin for this browser. No biggie... you can <a href="'. $src . '">click here to download the PDF file.</a>', array('@src' => $src), array('context' => 'ting_covers:error')) .
         '</p></object>';
